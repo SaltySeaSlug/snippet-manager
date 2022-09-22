@@ -15,6 +15,7 @@ namespace snippet_manager.Views
     public partial class frmNewSnippet : Form
     {
         public string? LastLanguageUsed { get; set; }
+        public string? LastCategoryUsed { get; set; }
         public string? SnippetName { get => textBox1.Text; }
         public string? CategoryName { get => comboBox1.Text; }
         public string? LanguageName { get => comboBox2.Text; }
@@ -30,6 +31,7 @@ namespace snippet_manager.Views
                 //{
                 //    // use treeview node
                     comboBox2.SelectedIndex = comboBox2.FindString(LastLanguageUsed);
+                    comboBox1.SelectedIndex = comboBox1.FindString(LastCategoryUsed);
                 //}
                 //else
                 //{

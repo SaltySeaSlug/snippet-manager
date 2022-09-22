@@ -1,13 +1,17 @@
 using Alsing.SourceCode;
 using Alsing.Windows.Forms;
 using snippet_manager.Models;
+using snippet_manager.Services;
 using SQLite;
 using System.Collections;
+using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Drawing.Printing;
+using System.Reflection;
 using System.Text.Json;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace snippet_manager
@@ -24,6 +28,7 @@ namespace snippet_manager
         private readonly FileSystemWatcher _syntaxFileWatcher;
         private bool ignore = false;
         private string? _lastWorkingSyntax;
+        private string? _lastWorkingCategory;
 
         private readonly string syntaxDirectory = Path.Combine(Application.StartupPath, "SyntaxFiles");
         private readonly string nodeFile = Path.Combine(Application.StartupPath, "id.json");
@@ -385,12 +390,25 @@ namespace snippet_manager
                     case 2: _lastWorkingSyntax = treeView.SelectedNode.Parent.Text; break;
                     default: _lastWorkingSyntax = treeView.SelectedNode.Parent.Parent.Text; break;
                 }
+
+                switch (treeView.SelectedNode.Level)
+                {
+                    case 0:
+                    case 1: break;
+                    case 2: _lastWorkingCategory = treeView.SelectedNode.Text; break;
+                    default: _lastWorkingCategory = treeView.SelectedNode.Parent.Text; break;
+                }
             }
             // set treeview previous node to null
             treeView.PreviousSelectedNode = null;
 
             // set treeview selected node to null
             treeView.SelectedNode = null;
+
+            lblNewSnippet.Visible = true;
+            lblNewSnippet.Text = "New Snippet";
+            //syntaxTextBox.BorderColor = Color.Red;
+            //syntaxTextBox.BorderStyle = Alsing.Windows.Forms.BorderStyle.Raised;
         }
         private void DisplaySnippet(TreeNode? node)
         {
@@ -432,7 +450,6 @@ namespace snippet_manager
 
         private void SetRights(TreeNode? node)
         {
-            // set all toolstripbuttons to false
             tsPrint.Enabled =
             tsDelete.Enabled =
             tsFind.Enabled =
@@ -443,12 +460,9 @@ namespace snippet_manager
             tsUndo.Enabled =
             tsSave.Enabled = false;
 
-            // check node level
             if (node?.Level == 0 || node?.Level == 1 || node?.Level == 2)
-                // return
                 return;
 
-            // set to true
             tsDelete.Enabled = true;
             tsPrint.Enabled = true;
         }
@@ -468,17 +482,17 @@ namespace snippet_manager
                 if (node?.Level == 0 && node?.Nodes?.Count == 0)
                 {
                     _lastWorkingSyntax = string.Empty;
+                    _lastWorkingCategory = string.Empty;
                 }
 
                 var categories = db.Table<SnippetCategory>().ToList();
-                var languages = db.Table<SnippetLanguage>().ToList();
-                var groups = db.Table<SnippetGroup>().ToList();
 
                 Views.frmNewSnippet? frm = new(categories.Select(x => x.Description).ToList(), _syntaxFiles)
                 {
                     Owner = this,
                     StartPosition = FormStartPosition.CenterParent,
-                    LastLanguageUsed = _lastWorkingSyntax
+                    LastLanguageUsed = _lastWorkingSyntax,
+                    LastCategoryUsed = _lastWorkingCategory
                 };
 
                 if (frm.ShowDialog() == DialogResult.OK)
@@ -491,58 +505,45 @@ namespace snippet_manager
                     TreeNode? lan = root?.Nodes.Find(languageName, true).SingleOrDefault() ?? CreateNode(languageName, null, 1);
                     TreeNode? cat = lan?.Nodes.Find(categoryName, true).SingleOrDefault() ?? CreateNode(categoryName, null, 1);
 
-                    if (!(categories?.Any(_ => _.Description == categoryName) ?? false) && !string.IsNullOrEmpty(categoryName))
+                    var itemKey = new ItemKey()
                     {
-                        AddCategory(db, categoryName);
-                        categories = db.Table<SnippetCategory>().ToList();
-                    }
-
-                    if (!(languages?.Any(_ => _.Description == languageName) ?? false) && !string.IsNullOrEmpty(languageName))
-                    {
-                        AddLanguage(db, languageName);
-                        languages = db.Table<SnippetLanguage>().ToList();
-                    }
-
-                    var dbKey = new Key()
-                    {
-                        GroupId = groups.SingleOrDefault(_ => _.Description == root.Name).Id,
-                        CategoryId = categories.SingleOrDefault(_ => _.Description == cat.Name).Id,
-                        LanguageId = languages.SingleOrDefault(_ => _.Description == lan.Name).Id,
-                        Description = snippetName
+                        Group = root.Name,
+                        Language = languageName,
+                        Category = categoryName,
+                        Description = snippetName,
+                        IsPublic = false
                     };
-                    db.Insert(dbKey);
-                    var keyId = GetLastInsertId(db);
-
-                    var dbSnippet = new Snippet()
+                    var itemValue = new ItemValue()
                     {
-                        KeyId = keyId,
-                        Code = syntaxTextBox.Document.Text.Trim(),
-                        Import = importTextBox.Text.Trim(),
-                        Keyword = keywordTextBox.Text.Trim()
-                    };
-                    db.Insert(dbSnippet);
-                    var snippetId = GetLastInsertId(db);
-
-                    TreeNode? snippet = CreateNode(snippetName, snippetId.ToString(), 2, 3, new ItemValue()
-                    {
-                        Key = new ItemKey()
-                        {
-                            GroupId = dbKey.GroupId,
-                            CategoryId = dbKey.CategoryId,
-                            LanguageId = dbKey.LanguageId,
-                            Group = root.Name,
-                            Language = languageName,
-                            Category = categoryName,
-                            Description = snippetName,
-                            Id = snippetId,
-                            IsPublic = false
-                        },
-                        Id = snippetId,
-                        KeyId = keyId,
+                        Key = itemKey,
                         Code = syntaxTextBox.Document.Text.Trim(),
                         Keywords = keywordTextBox.Text.Trim().Split(", ").ToList(),
                         Imports = importTextBox.Text.Trim().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList(),
-                    });
+                    };
+
+                    var snippetId = InsertOrUpdateSnippet(db, itemValue);
+                    var newSnippet = db.Query<SnippetQuery>(SnippetQuery).Where(_ => _.SnippetId == snippetId).Select(x => new ItemValue
+                    {
+                        Key = new ItemKey
+                        {
+                            Id = x.Id,
+                            GroupId = x.SnippetGroupId,
+                            Group = x.SnippetGroup,
+                            CategoryId = x.SnippetCategoryId,
+                            Category = x.SnippetCategory,
+                            LanguageId = x.SnippetLanguageId,
+                            Language = x.SnippetLanguage,
+                            Description = x.Name,
+                            IsPublic = x.IsPublic
+                        },
+                        KeyId = x.Id,
+                        Id = x.SnippetId.GetValueOrDefault(),
+                        Keyword = x.Keywords,
+                        Import = x.Imports,
+                        Code = x.Code
+                    }).Single();
+
+                    TreeNode? snippet = CreateNode(snippetName, snippetId.ToString(), 2, 3, newSnippet);
 
                     cat?.Nodes.Add(snippet);
 
@@ -558,16 +559,18 @@ namespace snippet_manager
 
                     syntaxTextBox.Document.Modified = keywordTextBox.Modified = importTextBox.Modified = false;
 
-                    treeView.SelectedNode = snippet;
+                    node = snippet;
                 }
                 else
+                {
+                    lblNewSnippet.Visible = true;
+
                     return;
+                }
             }
             else
             {
-                ItemValue? snippet = node?.Tag as ItemValue;
-
-                if (snippet is null)
+                if (node?.Tag is not ItemValue snippet)
                 {
                     MessageBox.Show($"{nameof(snippet)} is null, unable to update");
                     return;
@@ -592,100 +595,247 @@ namespace snippet_manager
                 {
                     snippet.Imports = importTextBox.Text.Trim().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList();
                 }
+
+                SaveDatabase();
             }
 
             syntaxTextBox.Document.Modified = keywordTextBox.Modified = importTextBox.Modified = false;
 
-            SaveDatabase();
-
             tsSave.Enabled = CheckForChanges();
+            treeView.SelectedNode = node;
+            treeView.Select();
+        }
+        private void DeleteSnippet(TreeNode? node)
+        {
+            if (node is null)
+                return;
+
+            using DialogCenteringService centeringService = new(this);
+
+            switch (node?.Level)
+            {
+                // Group
+                case 0:
+                // Language
+                case 1:
+                    MessageBox.Show(this, "Unable to delete this level", "Delete", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1);
+                    return;
+                // Category
+                case 2:
+                    {
+                        if (node.Nodes.Count > 0)
+                        {
+                            if (MessageBox.Show(this, "You are about to delete all snippets within this category\r\n\r\nAre you sure you want to continue?", "Confirm", MessageBoxButtons.OKCancel, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1) == DialogResult.Cancel)
+                                return;
+                        }
+
+                        var group = db.Table<SnippetGroup>().SingleOrDefault(_ => _.Description.ToLower() == node.Parent.Parent.Text.ToLower());
+                        var language = db.Table<SnippetLanguage>().SingleOrDefault(_ => _.Description.ToLower() == node.Parent.Text.ToLower());
+                        var category = db.Table<SnippetCategory>().SingleOrDefault(_ => _.Description.ToLower() == node.Text.ToLower());
+                        var keys = db.Table<Key>().Where(_ => _.GroupId == group.Id && _.LanguageId == language.Id && _.CategoryId == category.Id);
+
+                        foreach (var key in keys)
+                        {
+                            var snippet = db.Table<Snippet>().SingleOrDefault(_ => _.KeyId == key.Id);
+                            db.Delete<Snippet>(snippet.Id);
+                            db.Delete<Key>(key.Id);
+                        }
+
+                        treeView.Nodes.Remove(node);
+                        return;
+                    }
+                // Snippet
+                default:
+                    if (MessageBox.Show(this, $"Delete Snippet {node?.Text}?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1) == DialogResult.No)
+                        return;
+
+                    break;
+            }
+
+            TreeNode? index = node;
+            TreeNode? parent = index?.Parent;
+            TreeNode? parentparent = index?.Parent?.Parent;
+            TreeNode? nextNode = index?.PrevNode ?? index?.NextNode ?? parent?.FirstNode;
+            treeView.Nodes.Remove(index);
+
+            db.Delete<Snippet>((index.Tag as ItemValue).Id);
+            db.Delete<Key>((index.Tag as ItemValue).KeyId);
+
+
+            // check if automatic delete of empty nodes is true
+            //if (_config?.GetValue<bool>("Settings:" + Stuff._settingsDeleteEmptyNodes) ?? false)
+            //{
+            // check that parent is not null and node count is zero
+            if (parent is not null && parent.Nodes.Count == 0)
+            {
+                // remove node from treeview
+                treeView.Nodes.Remove(parent);
+            }
+
+            // check that parent parent and parent parent node count is zero
+            if (parentparent != null && parentparent.Nodes.Count == 0)
+            {
+                // remove node from treeview
+                treeView.Nodes.Remove(parentparent);
+            }
+            //}
+
+            treeView.SelectedNode = null;
+
+            ClearUI();
         }
 
 
 
-        public static void AddCategory(SQLiteConnection db, string name)
+
+
+        public static long? AddCategory(SQLiteConnection db, string name)
         {
             var category = new SnippetCategory()
             {
                 Description = name
             };
-            db.Insert(category);
+
+            if (!db.Table<SnippetCategory>().Any(x => x.Description?.ToLower() == name.ToLower()))
+            {
+                db.Insert(category);
+                return GetLastInsertId(db);
+            }
+            else
+            {
+                db.Update(category);
+                return db.Table<SnippetCategory>()?.SingleOrDefault(_ => _.Description?.ToLower() == name.ToLower())?.Id ?? null;
+            }
         }
-        public static void AddGroup(SQLiteConnection db, string name)
+        public static long? AddGroup(SQLiteConnection db, string name)
         {
             var group = new SnippetGroup()
             {
                 Description = name
             };
 
-            if (db.Table<SnippetGroup>().Count(x => x.Description.ToLower() == name.ToLower()) == 0)
+            if (!db.Table<SnippetGroup>().Any(x => x.Description?.ToLower() == name.ToLower()))
             {
                 db.Insert(group);
+                return GetLastInsertId(db);
             }
             else
             {
                 db.Update(group);
+                return db.Table<SnippetGroup>()?.SingleOrDefault(_ => _.Description?.ToLower() == name.ToLower())?.Id ?? null;
             }
         }
-        public static void AddLanguage(SQLiteConnection db, string name)
+        public static long? AddLanguage(SQLiteConnection db, string name)
         {
             var language = new SnippetLanguage()
             {
                 Description = name
             };
-            db.Insert(language);
-        }
 
-        public static void InsertOrUpdateSnippet(SQLiteConnection db, ItemValue item)
-        {
-            var dbCategory = new SnippetCategory()
+            if (!db.Table<SnippetLanguage>().Any(x => x.Description?.ToLower() == name.ToLower()))
             {
-                 Id = item.Key.CategoryId,
-                 Description = item.Key.Category
-            };
-
-            if (db.Table<SnippetCategory>().Any(x => x.Id == dbCategory.Id))
-            {
-                db.Update(dbCategory);
-            }
-
-            var dbKey = new Key()
-            {
-                Id = item.Key.Id,
-                CategoryId = item.Key.CategoryId,
-                GroupId = item.Key.GroupId,
-                LanguageId = item.Key.LanguageId,
-                Description = item.Key.Description,
-                IsPublic = item.Key.IsPublic
-            };
-
-            if (db.Table<Key>().Any(x => x.Id == dbKey.Id))
-            {
-                db.Update(dbKey);
-            }
-
-            var dbSnippet = new Snippet()
-            {
-                Id = item.Id,
-                KeyId = item.Key.Id,
-                Code = item.Code,
-                Keyword = item.Keyword,
-                Import = item.Import
-            };
-
-            if (db.Table<Snippet>().Any(x => x.Id == dbSnippet.Id))
-            {
-                db.Update(dbSnippet);
+                db.Insert(language);
+                return GetLastInsertId(db);
             }
             else
             {
-                db.Insert(dbKey);
-                dbSnippet.KeyId = item.KeyId = item.Key.Id = GetLastInsertId(db);
-                
-                db.Insert(dbSnippet);
-                item.Id = GetLastInsertId(db);
+                db.Update(language);
+                return db.Table<SnippetLanguage>()?.SingleOrDefault(_ => _.Description?.ToLower() == name.ToLower())?.Id ?? null;
             }
         }
+     
+        private static long AddKey(SQLiteConnection db, ItemKey key)
+        {
+            var groupId = AddGroup(db, key.Group);
+            var languageId = AddLanguage(db, key.Language);
+            var categoryId = AddCategory(db, key.Category);
+
+            var dbKey = new Key()
+            {
+                Id = key.Id,
+                GroupId = groupId.HasValue ? groupId.Value : key.GroupId,
+                LanguageId = languageId.HasValue ? languageId.Value : key.LanguageId,
+                CategoryId = categoryId.HasValue ? categoryId.Value : key.CategoryId,
+                Description = key.Description,
+                IsPublic = key.IsPublic
+            };
+
+            db.Insert(dbKey);
+            return GetLastInsertId(db);
+        }
+        private static void UpdateKey(SQLiteConnection db, ItemKey key)
+        {
+            var dbKey = new Key()
+            {
+                Id = key.Id,
+                GroupId = key.GroupId,
+                LanguageId = key.LanguageId,
+                CategoryId = key.CategoryId,
+                Description = key.Description,
+                IsPublic = key.IsPublic
+            };
+
+            db.Update(dbKey);
+        }
+        public static long InsertOrUpdateKey(SQLiteConnection db, ItemKey key)
+        {
+            if (!db.Table<Key>().Any(_ => _.Id == key.Id))
+            {
+                return AddKey(db, key);
+            }
+            else
+            {
+                UpdateKey(db, key);
+            }
+
+            return key.Id;
+        }
+
+        private static long AddSnippet(SQLiteConnection db, ItemValue snippet)
+        {
+            var keyId = InsertOrUpdateKey(db, snippet.Key);
+
+            var dbSnippet = new Snippet()
+            {
+                Id = snippet.Id,
+                KeyId = keyId,
+                Code = snippet.Code,
+                Import = snippet.Import,
+                Keyword = snippet.Keyword
+            };
+
+            db.Insert(dbSnippet);
+            return GetLastInsertId(db);
+        }
+        private static void UpdateSnippet(SQLiteConnection db, ItemValue snippet)
+        {
+            var keyId = InsertOrUpdateKey(db, snippet.Key);
+
+            var dbSnippet = new Snippet()
+            {
+                Id = snippet.Id,
+                KeyId = keyId,
+                Code = snippet.Code,
+                Import = snippet.Import,
+                Keyword = snippet.Keyword
+            };
+
+            db.Update(dbSnippet);
+        }
+        public static long InsertOrUpdateSnippet(SQLiteConnection db, ItemValue snippet)
+        {
+            if (!db.Table<Snippet>().Any(_ => _.Id == snippet.Id))
+            {
+                return AddSnippet(db, snippet);
+            }
+            else
+            {
+                UpdateSnippet(db, snippet);
+            }
+
+            return snippet.Id;
+        }
+
         public static long GetLastInsertId(SQLiteConnection db)
         {
             return SQLite3.LastInsertRowid(db.Handle);
@@ -745,6 +895,8 @@ namespace snippet_manager
         }
         private void treeView1_BeforeSelect(object sender, TreeViewCancelEventArgs e)
         {
+            lblNewSnippet.Visible = false;
+
             if (e?.Node?.Level == 0)
                 return;
 
@@ -853,20 +1005,156 @@ namespace snippet_manager
 
             }
         }
+        private void treeView1_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            treeView.LabelEdit = false;
 
+            if (e?.Node is null && e?.Button is not MouseButtons.Right)
+                return;
+
+            treeView.SelectedNode = e.Node;
+
+            ShowContext(e.Node);
+        }
         private void tsReload_Click(object sender, EventArgs e)
         {
             ReloadDatabases();
         }
-
         private void tsNew_Click(object sender, EventArgs e)
         {
             NewSnippet();
         }
-
         private void tsSave_Click(object sender, EventArgs e)
         {
             SaveSnippet(treeView.SelectedNode, false);
+        }
+
+        private void tsDelete_Click(object sender, EventArgs e)
+        {
+            DeleteSnippet(treeView.SelectedNode);
+        }
+
+        private void ShowContext(SyntaxBoxControl? control)
+        {
+            // check if control is null
+            if (control is null)
+                // return
+                return;
+
+            control.ContextMenuStrip = contextMenuStrip1;
+
+            ToolStripItem? cut = contextMenuStrip1.Items.Find("cut", false)?.FirstOrDefault();
+            if (cut is not null)
+            {
+                cut.DetachEvents();
+                cut.Click += (s, e) => control.Cut();
+                tsCut.Enabled = cut.Enabled = control.Selection.SelLength != 0;
+            }
+
+            ToolStripItem? copy = contextMenuStrip1.Items.Find("copy", false)?.FirstOrDefault();
+            if (copy is not null)
+            {
+                copy.DetachEvents();
+                copy.Click += (s, e) => control.Copy();
+                tsCopy.Enabled = copy.Enabled = control.CanCopy;
+            }
+
+            ToolStripItem? paste = contextMenuStrip1.Items.Find("paste", false)?.FirstOrDefault();
+            if (paste is not null)
+            {
+                paste.DetachEvents();
+                paste.Click += (s, e) => control.Paste();
+                tsPaste.Enabled = paste.Enabled = Clipboard.ContainsText();
+            }
+
+            ToolStripItem? undo = contextMenuStrip1.Items.Find("undo", false)?.FirstOrDefault();
+            if (undo is not null)
+            {
+                undo.DetachEvents();
+                undo.Click += (s, e) => control.Undo();
+                undo.Enabled = control.CanUndo;
+            }
+
+            ToolStripItem? redo = contextMenuStrip1.Items.Find("redo", false)?.FirstOrDefault();
+            if (redo is not null)
+            {
+                redo.DetachEvents();
+                redo.Click += (s, e) => control.Redo();
+                redo.Enabled = control.CanRedo;
+            }
+
+            ToolStripItem? find = contextMenuStrip1.Items.Find("find", false)?.FirstOrDefault();
+            if (find is not null)
+            {
+                find.DetachEvents();
+                find.Click += (s, e) =>
+                {
+                    control.Caret.Position.X = 0;
+                    control.Caret.Position.Y = 0;
+                    control.ShowFind();
+                };
+                tsFind.Enabled = find.Enabled = control.Document.Text.Length != 0;
+            }
+
+            ToolStripItem? replace = contextMenuStrip1.Items.Find("replace", false)?.FirstOrDefault();
+            if (replace is not null)
+            {
+                replace.DetachEvents();
+                replace.Click += (s, e) =>
+                {
+                    control.Caret.Position.X = 0;
+                    control.Caret.Position.Y = 0;
+                    control.ShowReplace();
+                };
+                replace.Enabled = control.Document.Text.Length != 0;
+            }
+
+        }
+        private void ShowContext(TreeNode? node)
+        {
+            if (node is null)
+                return;
+
+            node.ContextMenuStrip = null;
+            node.ContextMenuStrip = contextMenuStrip2;
+
+            ToolStripItem? deleteSnippet = contextMenuStrip2.Items.Find("msDeleteSnippet", false)?.FirstOrDefault();
+            if (deleteSnippet is not null)
+            {
+                deleteSnippet.DetachEvents();
+                deleteSnippet.Click += (s, e) => DeleteSnippet(node);
+
+                if (node?.Level == 3)
+                {
+                    deleteSnippet.Text = "Delete Snippet";
+                    deleteSnippet.Visible = true;
+                }
+                else if (node?.Level == 2)
+                {
+                    deleteSnippet.Text = "Delete Category";
+
+                    if (node.Nodes.Count > 0)
+                    {
+                        deleteSnippet.Visible = true;
+                    }
+                    else
+                    {
+                        //deleteSnippet.Visible = !(_config?.GetValue<bool>("Settings:" + Stuff._settingsDeleteEmptyNodes) ?? false);
+                    }
+                }
+                else
+                {
+                    deleteSnippet.Visible = false;
+                }
+            }
+
+            ToolStripItem? createNewSnippet = contextMenuStrip2.Items.Find("msCreateSnippet", false)?.FirstOrDefault();
+            if (createNewSnippet is not null)
+            {
+                createNewSnippet.DetachEvents();
+                createNewSnippet.Click += (s, e) => NewSnippet();
+                createNewSnippet.Visible = node?.Level == 2;
+            }
         }
     }
 
@@ -906,6 +1194,23 @@ namespace snippet_manager
 
     public static class Ex
     {
+        public static EventHandlerList? DetachEvents(this Component? obj)
+        {
+            if (obj is null)
+                return null;
+
+            object? objNew = obj?.GetType()?.GetConstructor(Array.Empty<Type>())?.Invoke(Array.Empty<object>());
+            PropertyInfo? propEvents = obj?.GetType().GetProperty("Events", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            EventHandlerList? eventHandlerList_obj = (EventHandlerList?)propEvents?.GetValue(obj, null);
+            EventHandlerList? eventHandlerList_objNew = (EventHandlerList?)propEvents?.GetValue(objNew, null);
+
+            eventHandlerList_objNew?.AddHandlers(eventHandlerList_obj ?? new());
+            eventHandlerList_obj?.Dispose();
+
+            return eventHandlerList_objNew;
+        }
+
         public static IEnumerable<T> SelectFrom<T>(this IDataReader reader,
                                       Func<IDataReader, T> projection)
         {
