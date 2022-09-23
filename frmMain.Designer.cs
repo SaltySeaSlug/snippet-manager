@@ -385,6 +385,7 @@
             this.tsHelp.Size = new System.Drawing.Size(24, 24);
             this.tsHelp.Text = "toolStripButton18";
             this.tsHelp.ToolTipText = "Help";
+            this.tsHelp.Click += new System.EventHandler(this.tsHelp_Click);
             // 
             // tsExit
             // 
@@ -396,6 +397,7 @@
             this.tsExit.Size = new System.Drawing.Size(24, 24);
             this.tsExit.Text = "toolStripButton17";
             this.tsExit.ToolTipText = "Exit";
+            this.tsExit.Click += new System.EventHandler(this.tsExit_Click);
             // 
             // splitContainer1
             // 

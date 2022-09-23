@@ -7,8 +7,8 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyVersion>1.0.0.1132</AssemblyVersion>
-    <FileVersion>1.0.0.1132</FileVersion>
+    <AssemblyVersion>1.0.0.1503</AssemblyVersion>
+    <FileVersion>1.0.0.1503</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -155,6 +155,10 @@
     <None Update="SyntaxFiles\XML.syn">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include=".github\workflows\build.yml" />
   </ItemGroup>
 
 </Project>

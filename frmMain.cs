@@ -4,10 +4,12 @@ using snippet_manager.Common;
 using snippet_manager.Entities;
 using snippet_manager.Models;
 using snippet_manager.Services;
+using snippet_manager.Views;
 using SQLite;
 using System.Data;
 using System.Drawing.Printing;
 using System.Text.Json;
+using System.Windows.Forms.VisualStyles;
 
 namespace snippet_manager
 {
@@ -1019,5 +1021,20 @@ namespace snippet_manager
         private void tsSearch_Click(object sender, EventArgs e)
         {
         }
+
+        private void tsExit_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
+        }
+
+        private void tsHelp_Click(object sender, EventArgs e)
+        {
+            frmHelp frm = new();
+            frm.Owner = this;
+            frm.StartPosition = FormStartPosition.CenterParent;
+            frm.ShowDialog();
+        }
     }
+
+   
 }
