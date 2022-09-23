@@ -131,5 +131,6 @@
         private Button button1;
         private ComboBox comboBox1;
         private TextBox textBox1;
+        private Label label3;
     }
 }

@@ -238,6 +238,8 @@
             this.tsSearch.Size = new System.Drawing.Size(24, 24);
             this.tsSearch.Text = "toolStripButton6";
             this.tsSearch.ToolTipText = "Search";
+            this.tsSearch.Visible = false;
+            this.tsSearch.Click += new System.EventHandler(this.tsSearch_Click);
             // 
             // tsFind
             // 
@@ -248,11 +250,13 @@
             this.tsFind.Size = new System.Drawing.Size(24, 24);
             this.tsFind.Text = "toolStripButton7";
             this.tsFind.ToolTipText = "Find";
+            this.tsFind.Visible = false;
             // 
             // toolStripSeparator3
             // 
             this.toolStripSeparator3.Name = "toolStripSeparator3";
             this.toolStripSeparator3.Size = new System.Drawing.Size(6, 27);
+            this.toolStripSeparator3.Visible = false;
             // 
             // tsCut
             // 
@@ -263,6 +267,7 @@
             this.tsCut.Size = new System.Drawing.Size(24, 24);
             this.tsCut.Text = "toolStripButton8";
             this.tsCut.ToolTipText = "Cut";
+            this.tsCut.Visible = false;
             // 
             // tsCopy
             // 
@@ -273,6 +278,7 @@
             this.tsCopy.Size = new System.Drawing.Size(24, 24);
             this.tsCopy.Text = "toolStripButton9";
             this.tsCopy.ToolTipText = "Copy";
+            this.tsCopy.Visible = false;
             // 
             // tsPaste
             // 
@@ -283,11 +289,13 @@
             this.tsPaste.Size = new System.Drawing.Size(24, 24);
             this.tsPaste.Text = "toolStripButton10";
             this.tsPaste.ToolTipText = "Paste";
+            this.tsPaste.Visible = false;
             // 
             // toolStripSeparator4
             // 
             this.toolStripSeparator4.Name = "toolStripSeparator4";
             this.toolStripSeparator4.Size = new System.Drawing.Size(6, 27);
+            this.toolStripSeparator4.Visible = false;
             // 
             // tsUndo
             // 
@@ -298,6 +306,7 @@
             this.tsUndo.Size = new System.Drawing.Size(24, 24);
             this.tsUndo.Text = "toolStripButton11";
             this.tsUndo.ToolTipText = "Undo";
+            this.tsUndo.Visible = false;
             // 
             // tsRedo
             // 
@@ -308,11 +317,13 @@
             this.tsRedo.Size = new System.Drawing.Size(24, 24);
             this.tsRedo.Text = "toolStripButton12";
             this.tsRedo.ToolTipText = "Redo";
+            this.tsRedo.Visible = false;
             // 
             // toolStripSeparator5
             // 
             this.toolStripSeparator5.Name = "toolStripSeparator5";
             this.toolStripSeparator5.Size = new System.Drawing.Size(6, 27);
+            this.toolStripSeparator5.Visible = false;
             // 
             // tsUpload
             // 
@@ -362,6 +373,7 @@
             this.tsSettings.Size = new System.Drawing.Size(24, 24);
             this.tsSettings.Text = "toolStripButton16";
             this.tsSettings.ToolTipText = "Settings";
+            this.tsSettings.Click += new System.EventHandler(this.tsSettings_Click);
             // 
             // tsHelp
             // 
@@ -616,7 +628,6 @@
             this.syntaxTextBox.SplitviewV = -4;
             this.syntaxTextBox.TabGuideColor = System.Drawing.Color.FromArgb(((int)(((byte)(233)))), ((int)(((byte)(233)))), ((int)(((byte)(233)))));
             this.syntaxTextBox.TabIndex = 0;
-            this.syntaxTextBox.Text = "syntaxBoxControl1";
             this.syntaxTextBox.WhitespaceColor = System.Drawing.SystemColors.ControlDark;
             this.syntaxTextBox.TextChanged += new System.EventHandler(this.syntaxBoxControl_TextChanged);
             // 

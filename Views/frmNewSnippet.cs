@@ -14,6 +14,8 @@ namespace snippet_manager.Views
 {
     public partial class frmNewSnippet : Form
     {
+        private Singleton instance = Singleton.Instance;
+
         public string? LastLanguageUsed { get; set; }
         public string? LastCategoryUsed { get; set; }
         public string? SnippetName { get => textBox1.Text; }
@@ -26,18 +28,19 @@ namespace snippet_manager.Views
 
             Load += (s, e) =>
             {
-                // TODO: check if default syntax language has been set; if set to treeview specific then use lastlanguageused; otherwise use default specified in config file
-                //if (_config.GetValue<string>("Settings:" + Stuff._settingsDefaultSyntaxLanguage).ToLower().Equals(Stuff._settingsDefaultSyntaxItem.ToLower()))
-                //{
-                //    // use treeview node
+                if (instance.Config.TryGetValue("Settings", out var settings) && settings is not null && string.IsNullOrEmpty(settings["DefaultSyntax"]))
+                {
                     comboBox2.SelectedIndex = comboBox2.FindString(LastLanguageUsed);
+                }
+                else
+                {
+                    comboBox2.SelectedIndex = comboBox2.FindString(settings["DefaultSyntax"]);
+                }
+
+                if (!string.IsNullOrEmpty(LastCategoryUsed))
+                {
                     comboBox1.SelectedIndex = comboBox1.FindString(LastCategoryUsed);
-                //}
-                //else
-                //{
-                //    // use config file default
-                //    comboBox2.SelectedIndex = comboBox2.FindString(_config.GetValue<string>("Settings:" + Stuff._settingsDefaultSyntaxLanguage));
-                //}
+                }
             };
         }
 
