@@ -13,20 +13,25 @@ This program stores and organizes your code snippets for most programming langua
 ## Features
 
 - Easily add, update, and delete your snippet records.
-- SQLite database storage.
+- SQLite database for storage instead of file storage.
 - Syntax highlighting for code snippets.
+- Print snippets.
+- Manage authors, contact info, and languages for snippet records.
 
 ## Planned Features
 
-- Importing and exporting of snippet records.
-- Manage authors, contact info, and languages for those records.
-- Search engine that can search by keywords, languages, authors, or all three.
-- Keyboard shortcuts.
-- Open other databases for viewing or editing.
-- Create backups of the loaded database.
-- Manage databases separately in a multi-user environment.
-- Auto and manually check for updates from within the program.
-- Language filter to filter out everything except what you want to see.
+- [ ] Importing and exporting of snippet records.
+- [ ] Search engine that can search by keywords, languages, authors, or all three.
+- [ ] Keyboard shortcuts.
+- [ ] Open other databases for viewing or editing.
+- [ ] Create backups of the loaded database.
+- [ ] Manage databases separately in a multi-user environment.
+- [ ] Auto and manually check for updates from within the program.
+- [ ] Language filter to filter out everything except what you want to see.
+- [ ] Autosave.
+- [ ] Additional language support.
+- [ ] Cross platform version.
+- [ ] Different snippet views.
 
 
 [Snippet Manager]: http://www.snippetmanager.net/

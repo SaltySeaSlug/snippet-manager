@@ -6,16 +6,16 @@ using System.Threading.Tasks;
 
 namespace snippet_manager.Models
 {
-    internal record struct Group(string? group, string? language, string? category)
+    internal record struct GroupRecord(string? group, string? language, string? category)
     {
-        public static implicit operator (string? Group, string? Language, string? Category)(Group value)
+        public static implicit operator (string? Group, string? Language, string? Category)(GroupRecord value)
         {
             return (value.group, value.language, value.category);
         }
 
-        public static implicit operator Group((string? group, string? language, string? category) value)
+        public static implicit operator GroupRecord((string? group, string? language, string? category) value)
         {
-            return new Group(value.group, value.language, value.category);
+            return new GroupRecord(value.group, value.language, value.category);
         }
     }
 }

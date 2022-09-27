@@ -1,21 +1,22 @@
 using Alsing.SourceCode;
 using Alsing.Windows.Forms;
 using snippet_manager.Common;
+using snippet_manager.Controls;
 using snippet_manager.Entities;
 using snippet_manager.Models;
 using snippet_manager.Services;
 using snippet_manager.Views;
 using SQLite;
+using System.ComponentModel;
 using System.Data;
 using System.Drawing.Printing;
 using System.Text.Json;
-using System.Windows.Forms.VisualStyles;
 
 namespace snippet_manager
 {
     public partial class frmMain : Form
     {
-        private readonly DatabaseHandler db;
+        private readonly Repository db;
         private Singleton instance = Singleton.Instance;
 
         private int _snippetCount = 0;
@@ -24,21 +25,20 @@ namespace snippet_manager
             get { return _snippetCount; } 
             set { _snippetCount = value; toolStripStatusLabel1.Text = $"{_snippetCount} snippets loaded"; } 
         }
-        private List<SyntaxFileInfo> _syntaxFiles { get; set; } = new();
-        private readonly FileSystemWatcher _syntaxFileWatcher;
-        private bool ignore = false;
-        private string? _lastWorkingSyntax;
-        private string? _lastWorkingCategory;
-
-        private readonly string syntaxDirectory = Path.Combine(Application.StartupPath, "SyntaxFiles");
+        //private readonly FileSystemWatcher _syntaxFileWatcher;
+        //private readonly string syntaxDirectory = Path.Combine(Application.StartupPath, "SyntaxFiles");
         private readonly string nodeFile = Path.Combine(Application.StartupPath, "id.json");
         private readonly string treeFile = Path.Combine(Application.StartupPath, "tree.json");
+
+        private readonly ucSnippet uc;
+
 
         public frmMain()
         {
             InitializeComponent();
 
-            db = new DatabaseHandler();
+            db = new Repository();
+            uc = new(db);
 
             Load += (s, e) => Initialize();
             FormClosing += (s, e) =>
@@ -49,17 +49,17 @@ namespace snippet_manager
                 db.Close();
             };
 
-            _syntaxFileWatcher = new FileSystemWatcher(syntaxDirectory, "*.syn")
-            {
-                EnableRaisingEvents = true,
-                NotifyFilter = NotifyFilters.LastWrite
-            };
-            _syntaxFileWatcher.Changed += (s, e) =>
-            {
-                _syntaxFileWatcher.EnableRaisingEvents = false;
-                ReloadSyntaxFiles();
-                _syntaxFileWatcher.EnableRaisingEvents = true;
-            };
+            //_syntaxFileWatcher = new FileSystemWatcher(syntaxDirectory, "*.syn")
+            //{
+            //    EnableRaisingEvents = true,
+            //    NotifyFilter = NotifyFilters.LastWrite
+            //};
+            //_syntaxFileWatcher.Changed += (s, e) =>
+            //{
+            //    _syntaxFileWatcher.EnableRaisingEvents = false;
+            //    ReloadSyntaxFiles();
+            //    _syntaxFileWatcher.EnableRaisingEvents = true;
+            //};
 
             toolStripStatusLabel1.Text = null;
             toolStripStatusLabel2.Text = null;
@@ -72,28 +72,26 @@ namespace snippet_manager
             {
                 toolStrip1.ShowItemToolTips = settings["ShowTooltips"];
             }
+
+            uc.txtTitle.TextChanged += syntaxBoxControl_TextChanged;
+            uc.txtSummary.TextChanged += syntaxBoxControl_TextChanged;
+            uc.txtKeywords.TextChanged += syntaxBoxControl_TextChanged;
+            uc.txtVersion.TextChanged += syntaxBoxControl_TextChanged;
+            uc.syntaxBoxControl1.TextChanged += syntaxBoxControl_TextChanged;
+            uc.cmbGroup.SelectedValueChanged += comboBox_SelectedValueChanged;
+            uc.cmbAuthor.SelectedValueChanged += comboBox_SelectedValueChanged;
+            uc.cmbLanguage.SelectedValueChanged += comboBox_SelectedValueChanged;
+            uc.cmbCategory.SelectedValueChanged += comboBox_SelectedValueChanged;
         }
 
 
         private void ClearUI()
         {
-            syntaxTextBox.Document.Clear();
-            syntaxTextBox.Document.Text = string.Empty;
-            syntaxTextBox.Document.Tag = null;
-
-            keywordTextBox.Clear();
-            keywordTextBox.Text = string.Empty;
-            keywordTextBox.Tag = null;
-
-            importTextBox.Clear();
-            importTextBox.Text = string.Empty;
-            importTextBox.Tag = null;
+            uc.Clear();
         }
         private void Initialize()
         {
             InitialDatabase();
-            PrepareDirectories();
-            LoadSyntaxFiles();
             ClearUI();
             PopulateTreeView();
             LoadTreeView();
@@ -101,103 +99,86 @@ namespace snippet_manager
         }
         public void InitialDatabase()
         {
-            db.CreateTable<Key>();
-            db.CreateTable<Snippet>();
-            db.CreateTable<SnippetCategory>();
-            db.CreateTable<SnippetGroup>();
-            db.CreateTable<SnippetLanguage>();
-
-            db.AddGroup("My Snippets");
-        }
-        private void PrepareDirectories()
-        {
-            CheckPath(syntaxDirectory);
-        }
-        private void LoadSyntaxFiles()
-        {
-            if (!CheckPath(syntaxDirectory))
-                return;
-
-            string[] syntaxFiles = Directory.GetFiles(syntaxDirectory, "*.syn");
-
-            foreach (string? syntaxFile in syntaxFiles.OrderBy(_ => _))
-            {
-                _syntaxFiles.Add(new SyntaxFileInfo()
-                {
-                    DisplayName = Path.GetFileNameWithoutExtension(syntaxFile),
-                    FileName = syntaxFile,
-                    IsModified = false
-                });
-            }
+            db.InsertOrUpdate(new _Group() { Description = "My Snippets" });
         }
         private void LoadLastSnippet()
         {
             if (!CheckPath(nodeFile, false))
+            {
                 return;
+            }
 
             if (long.TryParse(File.ReadAllText(nodeFile), out long nodeId))
+            {
                 treeView.SelectedNode = treeView.Nodes.Find(nodeId.ToString(), true).SingleOrDefault();
+            }
         }
         public bool PopulateTreeView()
         {
-            List<ItemValue> records = new();
+            List<_TreeviewItem> records = new();
 
             var treeNodeRoots = db.GetGroups();
 
             if (treeNodeRoots.Count > 0)
             {
-                var roots = treeNodeRoots.Select(x => CreateNode(x.Description, null, 4)).ToArray();
+                var roots = treeNodeRoots.Select(x => CreateNode(x.Description, null, 0)).ToArray();
                 treeView.Nodes.AddRange(roots);
             }
 
-            var snippets = db.GetKeysSnippets();
+            var snippets = db.GetSnippets();
 
             if (snippets.Count > 0)
             {
-                records = snippets.Select(x => new ItemValue
+                records = snippets.Select(x => new _TreeviewItem
                 {
-                    Key = new ItemKey
-                    {
-                        Id = x.Id,
-                        GroupId = x.SnippetGroupId,
-                        Group = x.SnippetGroup,
-                        CategoryId = x.SnippetCategoryId,
-                        Category = x.SnippetCategory,
-                        LanguageId = x.SnippetLanguageId,
-                        Language = x.SnippetLanguage,
-                        Description = x.Name,
-                        IsPublic = x.IsPublic
-                    },
-                    KeyId = x.Id,
-                    Id = x.SnippetId.GetValueOrDefault(),
-                    Keyword = x.Keywords,
-                    Import = x.Imports,
-                    Code = x.Code
+                    Id = x.Id,
+                    Author = x.Author,
+                    AuthorId = x.AuthorId,
+                    Category = x.Category,
+                    CategoryId = x.CategoryId,
+                    Code = x.Code,
+                    Created = x.Created,
+                    Group = x.Group,
+                    GroupId = x.GroupId,
+                    Summary = x.Summary,
+                    Keywords = x.Keyword,
+                    Language = x.Language,
+                    LanguageId = x.LanguageId,
+                    Title = x.Title,
+                    Updated = x.Updated,
+                    Version = x.Version
                 }).ToList();
             }
 
             if (records is null || !records.Any())
+            {
                 return false;
+            }
 
-            IEnumerable<IGrouping<Group, ItemValue>>? groupByKeys = from record in records
-                                                                    group record by new Group(record.Key.Group, record.Key.Language, record.Key.Category) into newRecords
+            IEnumerable<IGrouping<GroupRecord, _TreeviewItem>>? groupByKeys = from record in records
+                                                                    group record by new GroupRecord(record.Group.Description, record.Language.Description, record.Category.Description) 
+                                                                    into newRecords
                                                                     select newRecords ?? null;
 
             if (groupByKeys is null || !groupByKeys.Any())
-                return false;
-
-            foreach (IGrouping<Group, ItemValue>? record in groupByKeys.OrderBy(_ => _.Key.language).ThenBy(_ => _.Key.category))
             {
-                if (record is null || !record.Any()) 
+                return false;
+            }
+
+            foreach (IGrouping<GroupRecord, _TreeviewItem>? record in groupByKeys.OrderBy(_ => _.Key.language).ThenBy(_ => _.Key.category))
+            {
+                if (record is null || !record.Any())
+                {
                     continue;
+                }
 
                 TreeNode? root = treeView.Nodes.Find(record.Key.group, false).SingleOrDefault() ?? CreateNode(groupByKeys?.FirstOrDefault()?.Key.group, null, 0);
                 TreeNode? lang = CreateNode(record.Key.language, null, 1);
-                TreeNode? cat = CreateNode(record.Key.category, null, 1);
+                TreeNode? cat = CreateNode(record.Key.category, null, 2);
 
-                foreach (ItemValue? code in record.OrderBy(_ => _.Key.Description))
+                foreach (_TreeviewItem? code in record.OrderBy(_ => _.Group.Description))
                 {
-                    TreeNode? snippet = CreateNode(code?.Key?.Description, code?.Key?.Id.ToString(), 2, 3, code);
+                    TreeNode? snippet = CreateNode(code?.Title, code?.Id.ToString(), 3, null, code);
                     cat?.Nodes.Add(snippet);
                     SnippetCount++;
                 }
@@ -205,16 +186,24 @@ namespace snippet_manager
                 lang?.Nodes.Add(cat);
 
                 if (root is null)
+                {
                     continue;
+                }
 
                 if (!root.Nodes.Find(record.Key.language, false).Any())
+                {
                     root.Nodes.Add(lang);
+                }
                 else
+                {
                     root?.Nodes?.Find(record.Key.language, false)?
                         .FirstOrDefault()?.Nodes.Add(cat);
+                }
 
                 if (!treeView.Nodes.Find(root?.Name, true).Any())
+                {
                     treeView.Nodes.Add(root);
+                }
             }
 
             return true;
@@ -226,33 +215,45 @@ namespace snippet_manager
                 string data = File.ReadAllText(treeFile);
 
                 if (string.IsNullOrEmpty(data))
+                {
                     return;
+                }
 
                 List<bool>? nodeStatus = JsonSerializer.Deserialize<List<bool>>(data) ?? null;
 
                 if (nodeStatus == null || nodeStatus.Count == 0)
+                { 
                     return;
+                }
 
                 IEnumerable<TreeNode>? treeNodes = treeView.SearchTree();
 
                 if (nodeStatus.Count != treeNodes.Count())
+                {
                     return;
+                }
 
                 int i = 0;
 
                 foreach (TreeNode? node in treeNodes)
                 {
                     if (nodeStatus[i++] == true)
+                    {
                         node.Expand();
+                    }
                     else
+                    {
                         node.Collapse();
+                    }
                 }
             }
         }
         private void SaveTreeView()
         {
             if (!CheckPath(treeFile, false))
+            {
                 return;
+            }
 
             List<bool>? nodes = treeView.SearchTree()
                 .Select(node => node.IsExpanded)
@@ -286,47 +287,28 @@ namespace snippet_manager
 
             treeView.EndUpdate();
         }
-        private void ReloadSyntaxFiles()
-        {
-            SyntaxDocument? current = syntaxTextBox.Document;
-            _syntaxFiles.Clear();
-
-            LoadSyntaxFiles();
-
-            syntaxTextBox.Invoke(() =>
-            {
-                syntaxTextBox.Invalidate();
-                syntaxTextBox.Document = new SyntaxDocument
-                {
-                    SyntaxFile = current.SyntaxFile,
-                    Text = current.Text
-                };
-                syntaxTextBox.Update();
-            });
-        }
-        private bool CheckForChanges()
-        {
-            return syntaxTextBox.Document.Modified ||
-                   keywordTextBox.Modified ||
-                   importTextBox.Modified;
-        }
+       
         private void SaveDatabase()
         {
             foreach (TreeNode node in treeView.Nodes)
             {
-                List<ItemValue?> snippets = node.Nodes.SearchTree()
-                    .Where(x => x.Tag != null)
-                    .Select(x => x.Tag as ItemValue).ToList();
+                List<_TreeviewItem?> snippets = node.Nodes.SearchTree()
+                    .Where(x => x.Tag is not null)
+                    .Select(x => x.Tag as _TreeviewItem).ToList();
 
                 if (snippets is null || !snippets.Any())
+                {
                     continue;
+                }
 
                 foreach (var snippet in snippets)
                 {
                     if (snippet is null)
+                    {
                         continue;
+                    }
 
-                    db.InsertOrUpdateSnippet(snippet);
+                    db.InsertOrUpdate(snippet);
                 }
             }
 
@@ -334,7 +316,7 @@ namespace snippet_manager
         }
         private void PrintSnippet()
         {
-            PrintDocument printDoc = new PrintDocument
+            PrintDocument printDoc = new()
             {
                 DocumentName = treeView.SelectedNode.Text
             };
@@ -351,102 +333,57 @@ namespace snippet_manager
             {
                 printDoc.PrintPage += (s, e) =>
                 {
-                    string script = treeView.SelectedNode.Text + Environment.NewLine + Environment.NewLine + importTextBox.Text + Environment.NewLine + syntaxTextBox.Document.Text;
-                    e?.Graphics?.DrawString(script, new Font("Arial", 12), Brushes.Black, (float)e.MarginBounds.X, (float)e.MarginBounds.Y);
+                    var snippet = treeView.SelectedNode.Tag as _TreeviewItem;
+
+                    string printString = snippet.Title + Environment.NewLine + snippet.Summary + Environment.NewLine + Environment.NewLine + Environment.NewLine + snippet.Code;
+                    e?.Graphics?.DrawString(printString, new Font("Arial", 12), Brushes.Black, (float)e.MarginBounds.X, (float)e.MarginBounds.Y);
                 };
                 printDoc.Print();
             }
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         private void NewSnippet()
-        {
+        {      
             SaveSnippet(treeView.SelectedNode);
-
             ClearUI();
-
-            if (treeView.SelectedNode is not null)
-            {
-                // just a helper thing for the save snippet form
-                switch (treeView.SelectedNode.Level)
-                {
-                    case 0: break;
-                    case 1: _lastWorkingSyntax = treeView.SelectedNode.Text; break;
-                    case 2: _lastWorkingSyntax = treeView.SelectedNode.Parent.Text; break;
-                    default: _lastWorkingSyntax = treeView.SelectedNode.Parent.Parent.Text; break;
-                }
-
-                switch (treeView.SelectedNode.Level)
-                {
-                    case 0:
-                    case 1: break;
-                    case 2: _lastWorkingCategory = treeView.SelectedNode.Text; break;
-                    default: _lastWorkingCategory = treeView.SelectedNode.Parent.Text; break;
-                }
-            }
-            // set treeview previous node to null
             treeView.PreviousSelectedNode = null;
-
-            // set treeview selected node to null
             treeView.SelectedNode = null;
 
-            lblNewSnippet.Visible = true;
-            lblNewSnippet.Text = "New Snippet";
-            //syntaxTextBox.BorderColor = Color.Red;
-            //syntaxTextBox.BorderStyle = Alsing.Windows.Forms.BorderStyle.Raised;
+            uc.NewMode();
+            uc.ResetChanges();
+            SetRights(null);
         }
         private void DisplaySnippet(TreeNode? node)
         {
-            if (node?.Tag is null || node.Tag is not ItemValue snippet)
-                return;
+            if (node?.Tag is null || node.Tag is not _TreeviewItem snippet)
+            {
+                return; 
+            }
 
             ClearUI();
 
-            SelectSyntaxFile(node);
+            // TODO: ADD SUPPORT FOR DIFFERENT SNIPPET VIEW
+            if (splitContainer1.Panel2.Controls.Count == 0)
+            {
+                splitContainer1.Panel2.Controls.Add(uc);
+            }
 
-            syntaxTextBox.Document.Text = snippet?.Code;
-            keywordTextBox.Text = snippet?.Keyword;
-            importTextBox.Text = snippet?.Import;
+            uc.ViewMode(snippet);
+
+            uc.Dock = DockStyle.Fill;
         }
-
         private void SaveNodeId(TreeNode? node)
         {
-            if (node?.Tag is null || node.Tag is not ItemValue snippet)
+            if (node?.Tag is null || node.Tag is not _TreeviewItem snippet)
+            {
                 return;
+            }
 
             if (CheckPath(nodeFile, false))
-                File.WriteAllText(nodeFile, snippet?.Key?.Id.ToString());
-        }
-
-        private void SelectSyntaxFile(TreeNode? node)
-        {
-            if (node?.Parent?.Parent is null)
-                return;
-
-            if (node.Parent.Parent.Level == 1)
             {
-                syntaxTextBox.Document.SyntaxFile = _syntaxFiles
-                    .Find(syntax => syntax.DisplayName == node.Parent.Parent.Text)?
-                    .FileName ??
-                    string.Empty;
+                File.WriteAllText(nodeFile, snippet?.Id.ToString());
             }
         }
-
-
+      
         private void SetRights(TreeNode? node)
         {
             tsPrint.Enabled =
@@ -457,158 +394,95 @@ namespace snippet_manager
             tsCopy.Enabled =
             tsRedo.Enabled =
             tsUndo.Enabled =
-            tsSave.Enabled = false;
+            tsSave.Enabled =
+            tsEdit.Enabled = false;
 
-            if (node?.Level == 0 || node?.Level == 1 || node?.Level == 2)
+            if (node is null || node?.Level == 0 || node?.Level == 1 || node?.Level == 2)
+            {
                 return;
+            }
 
             tsDelete.Enabled = true;
             tsPrint.Enabled = true;
+            tsEdit.Enabled = true;
         }
-
         private void SaveSnippet(TreeNode? node, bool prompt = true)
         {
-            using Services.DialogCenteringService centeringService = new(this);
+            using DialogCenteringService centeringService = new(this);
 
-            if (!CheckForChanges() || prompt && MessageBox.Show($"Do you want to save changes to {node?.Text}?", "Save Changes", MessageBoxButtons.YesNo) == DialogResult.No)
+            if (!uc.CheckForChanges() || prompt && MessageBox.Show($"Do you want to save changes to {node?.Text}?", "Save Changes", MessageBoxButtons.YesNo) == DialogResult.No)
             {
-                lblNewSnippet.Visible = false;
-                syntaxTextBox.Document.Modified = keywordTextBox.Modified = importTextBox.Modified = false;
+                tsSave.Enabled = uc.ResetChanges();
                 return;
             }
 
-            if (node is null || node?.Level == 0 && node?.Nodes?.Count == 0)
+            if (node is null)
             {
-                if (node?.Level == 0 && node?.Nodes?.Count == 0)
+                var newSnippet = uc.InsertMode();
+
+                if (newSnippet is null)
                 {
-                    _lastWorkingSyntax = string.Empty;
-                    _lastWorkingCategory = string.Empty;
-                }
-
-                var categories = db.GetCategories();
-
-                Views.frmNewSnippet? frm = new(categories.Select(x => x.Description).ToList(), _syntaxFiles)
-                {
-                    Owner = this,
-                    StartPosition = FormStartPosition.CenterParent,
-                    LastLanguageUsed = _lastWorkingSyntax,
-                    LastCategoryUsed = _lastWorkingCategory
-                };
-
-                if (frm.ShowDialog() == DialogResult.OK)
-                {
-                    string? languageName = frm?.LanguageName?.Trim();
-                    string? categoryName = frm?.CategoryName?.Trim();
-                    string? snippetName = frm?.SnippetName?.Trim();
-
-                    TreeNode? root = treeView.Nodes.Find("My Snippets", false).FirstOrDefault();
-                    TreeNode? lan = root?.Nodes.Find(languageName, true).SingleOrDefault() ?? CreateNode(languageName, null, 1);
-                    TreeNode? cat = lan?.Nodes.Find(categoryName, true).SingleOrDefault() ?? CreateNode(categoryName, null, 1);
-
-                    var itemKey = new ItemKey()
-                    {
-                        Group = root.Name,
-                        Language = languageName,
-                        Category = categoryName,
-                        Description = snippetName,
-                        IsPublic = false
-                    };
-                    var itemValue = new ItemValue()
-                    {
-                        Key = itemKey,
-                        Code = syntaxTextBox.Document.Text.Trim(),
-                        Keywords = keywordTextBox.Text.Trim().Split(", ").ToList(),
-                        Imports = importTextBox.Text.Trim().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList(),
-                    };
-
-                    var snippetId = db.InsertOrUpdateSnippet(itemValue);
-                    var newSnippet = db.GetKeysSnippets().Where(_ => _.SnippetId == snippetId).Select(x => new ItemValue
-                    {
-                        Key = new ItemKey
-                        {
-                            Id = x.Id,
-                            GroupId = x.SnippetGroupId,
-                            Group = x.SnippetGroup,
-                            CategoryId = x.SnippetCategoryId,
-                            Category = x.SnippetCategory,
-                            LanguageId = x.SnippetLanguageId,
-                            Language = x.SnippetLanguage,
-                            Description = x.Name,
-                            IsPublic = x.IsPublic
-                        },
-                        KeyId = x.Id,
-                        Id = x.SnippetId.GetValueOrDefault(),
-                        Keyword = x.Keywords,
-                        Import = x.Imports,
-                        Code = x.Code
-                    }).Single();
-
-                    TreeNode? snippet = CreateNode(snippetName, snippetId.ToString(), 2, 3, newSnippet);
-
-                    cat?.Nodes.Add(snippet);
-
-                    if (lan?.Nodes.Find(categoryName, true).Length == 0)
-                    {
-                        lan?.Nodes.Add(cat);
-                    }
-
-                    if (root?.Nodes.Find(languageName, true).Length == 0)
-                    {
-                        root?.Nodes.Add(lan);
-                    }
-
-                    syntaxTextBox.Document.Modified = keywordTextBox.Modified = importTextBox.Modified = false;
-
-                    node = snippet;
-                }
-                else
-                {
-                    lblNewSnippet.Visible = true;
-
                     return;
                 }
+
+                TreeNode? root = treeView.Nodes.Find(newSnippet?.Group?.Description, false).FirstOrDefault();
+                TreeNode? lan = root?.Nodes.Find(newSnippet?.Language?.Description, true).SingleOrDefault() ?? CreateNode(newSnippet?.Language?.Description, null, 1);
+                TreeNode? cat = lan?.Nodes.Find(newSnippet?.Category?.Description, true).SingleOrDefault() ?? CreateNode(newSnippet?.Category?.Description, null, 1);
+                TreeNode? snippet = CreateNode(newSnippet?.Title, newSnippet?.Id.ToString(), 2, 3, newSnippet);
+
+                if (snippet is null)
+                {
+                    return;
+                }
+
+                cat?.Nodes.Add(snippet);
+
+                if (lan?.Nodes.Find(newSnippet?.Category?.Description, true).Length == 0)
+                {
+                    lan?.Nodes.Add(cat);
+                }
+
+                if (root?.Nodes.Find(newSnippet?.Language?.Description, true).Length == 0)
+                {
+                    root?.Nodes.Add(lan);
+                }
+
+                node = snippet;
             }
             else
             {
-                if (node?.Tag is not ItemValue snippet)
+                if (node?.Tag is not _TreeviewItem snippet)
                 {
                     MessageBox.Show($"No valid node selected, unable to update");
                     return;
                 }
 
-                if (!snippet?.Key?.Group?.ToLower()?.Equals("My Snippets"?.ToLower()) ?? false)
+                if (!snippet?.Group?.Description?.ToLower()?.Equals("My Snippets"?.ToLower()) ?? false)
                 {
                     MessageBox.Show(this, $"You are attempting to modify a snippet that is not in your\r\n\\My Snippets folder.\r\nYou may lose your modifications if you download snippet updates in the future.", "Warning", MessageBoxButtons.OKCancel, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
                 }
 
-                if (snippet is not null && syntaxTextBox.Document.Modified)
-                {
-                    snippet.Code = syntaxTextBox.Document.Text.Trim();
-                }
-
-                if (snippet is not null && keywordTextBox.Modified)
-                {
-                    snippet.Keywords = keywordTextBox.Text.Trim().Split(", ").ToList();
-                }
-
-                if (snippet is not null && importTextBox.Modified)
-                {
-                    snippet.Imports = importTextBox.Text.Trim().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList();
-                }
+                uc.UpdateMode(snippet);
 
                 SaveDatabase();
             }
 
-            syntaxTextBox.Document.Modified = keywordTextBox.Modified = importTextBox.Modified = false;
+            tsSave.Enabled = uc.ResetChanges();
 
-            tsSave.Enabled = CheckForChanges();
+            ReloadDatabases();
+
+            LoadTreeView();
+            LoadLastSnippet();
+
             treeView.SelectedNode = node;
             treeView.Select();
         }
         private void DeleteSnippet(TreeNode? node)
         {
             if (node is null)
+            {
                 return;
+            }
 
             using DialogCenteringService centeringService = new(this);
             
@@ -628,16 +502,14 @@ namespace snippet_manager
                                 return;
                         }
 
-                        var group = db.GetGroupByDescription(node.Parent.Parent.Text);
-                        var language = db.GetLanguageByDescription(node.Parent.Text);
-                        var category = db.GetCategoryByDescription(node.Text);
-                        var keys = db.GetKeysById(group?.Id ?? 0, language?.Id ?? 0, category?.Id ?? 0);
+                        var source = node.Nodes.SearchTree()
+                            .Where(x => x.Tag is not null)
+                            .Select(x => x.Tag as _TreeviewItem)
+                            .ToList();
 
-                        foreach (var key in keys)
+                        foreach (var snippet in source)
                         {
-                            var snippet = db.GetSnippets().SingleOrDefault(_ => _.KeyId == key.Id);
                             db.DeleteSnippetById(snippet.Id);
-                            db.DeleteKeyById(key.Id);
                         }
 
                         TreeNode? indexNode = node;
@@ -649,7 +521,6 @@ namespace snippet_manager
                         {
                             if (indexParentNode is not null && indexParentNode?.Nodes?.Count == 0)
                             {
-
                                 treeView.Nodes.Remove(indexParentNode);
                             }
                         }
@@ -664,14 +535,18 @@ namespace snippet_manager
                     break;
             }
 
+            var snippetId = (node?.Tag as _TreeviewItem)?.Id ?? null;
+
+            if (snippetId is not null && snippetId.HasValue)
+            {
+                db.DeleteSnippetById(snippetId.Value);
+            }
+
             TreeNode? index = node;
             TreeNode? parent = index?.Parent;
             TreeNode? parentparent = index?.Parent?.Parent;
             TreeNode? nextNode = index?.PrevNode ?? index?.NextNode ?? parent?.FirstNode;
             treeView.Nodes.Remove(index);
-
-            db.DeleteSnippetById((index.Tag as ItemValue).Id);
-            db.DeleteKeyById((index.Tag as ItemValue).KeyId);
 
             if (settings is not null && settings["DeleteEmptyNodes"])
             {
@@ -690,20 +565,21 @@ namespace snippet_manager
 
             ClearUI();
         }
-
-     
-
         private static bool CheckPath(string path, bool isDirectory = true)
         {
             if (isDirectory)
             {
                 if (!Directory.Exists(path))
+                {
                     Directory.CreateDirectory(path);
+                }
             }
             else
             {
                 if (!File.Exists(path))
+                {
                     File.Create(path).Close();
+                }
             }
 
             return true;
@@ -719,7 +595,9 @@ namespace snippet_manager
         private static TreeNode? CreateNode(string? text, string? name, int icon, int? selected = null, object? tag = null)
         {
             if (string.IsNullOrEmpty(text))
+            {
                 return null;
+            }
 
             TreeNode? node = new(text)
             {
@@ -735,15 +613,16 @@ namespace snippet_manager
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
+            SetRights(e?.Node);
+
             if (e?.Node?.Tag is null)
             {
-                tsSave.Enabled = false;
                 ClearUI();
+                return;
             }
 
             DisplaySnippet(e?.Node);
             SaveNodeId(e?.Node);
-            SetRights(e?.Node);
         }
         private void treeView1_BeforeSelect(object sender, TreeViewCancelEventArgs e)
         {
@@ -756,19 +635,23 @@ namespace snippet_manager
         }
         private void treeView1_AfterLabelEdit(object sender, NodeLabelEditEventArgs e)
         {
-            if (!ignore && e?.Label?.Length > 0 && e?.Label?.IndexOfAny(new char[] { '@', '.', ',', '!' }) == -1)
+            if (!e.CancelEdit && e?.Label?.Length > 0 && e?.Label?.IndexOfAny(new char[] { '@', '.', ',', '!' }) == -1)
             {
-                ignore = true;
-
                 e.CancelEdit = true;
 
-                if (e.Node.Level == 0 || e.Node.Level == 1) return;
+                if (e.Node.Level == 0 || e.Node.Level == 1)
+                {
+                    return;
+                }
+
                 if (e.Node.Level == 2 && !string.IsNullOrEmpty(e.Label))
                 {
                     string? label = e.Label;
 
                     if (string.IsNullOrEmpty(label))
+                    {
                         return;
+                    }
 
                     IEnumerable<TreeNode>? children = e.Node.Nodes.SearchTree();
 
@@ -777,24 +660,26 @@ namespace snippet_manager
                         if (node.Tag is not null && e.Node.Level == 2)
                         {
                             e.Node.Text = e.Node.Name = label;
-                            ItemKey? key = (node.Tag as ItemValue)?.Key ?? null;
+                            _TreeviewItem? snippet = (node.Tag as _TreeviewItem) ?? null;
 
-                            if (key is not null)
-                                key.Category = label;
+                            if (snippet is not null && snippet.Category is not null)
+                            {
+                                snippet.Category.Description = label;
+                            }
                         }
                     }
 
                 }
                 else if (e.Node.Level == 3)
                 {
-                    ItemKey? key = (e.Node.Tag as ItemValue)?.Key ?? null;
+                    _TreeviewItem? snippet = (e.Node.Tag as _TreeviewItem) ?? null;
 
-                    if (key is not null)
-                        key.Description = e.Node.Text = e.Label;
+                    if (snippet is not null)
+                    {
+                        snippet.Title = e.Node.Text = e.Label;
+                    }
                 }
                 else { }
-
-                ignore = false;
             }
 
             treeView.LabelEdit = false;
@@ -804,6 +689,11 @@ namespace snippet_manager
         }
         private void frmMain_KeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Modifiers == Keys.Control && e.KeyCode == Keys.N)
+            {
+                NewSnippet();
+            }
+
             if (e.Modifiers == Keys.Control && e.KeyCode == Keys.S)
             {
                 SaveSnippet(treeView.SelectedNode, false);
@@ -818,43 +708,44 @@ namespace snippet_manager
             if (e.KeyCode == Keys.F2)
             {
                 if (treeView.SelectedNode.Level == 0 || treeView.SelectedNode.Level == 1)
+                {
                     return;
+                }
 
                 treeView.LabelEdit = true;
 
                 if (!treeView.SelectedNode.IsEditing)
+                {
                     treeView.SelectedNode.BeginEdit();
+                }
             }
         }
-        private void syntaxBoxControl_TextChanged(object sender, EventArgs e)
+        private void syntaxBoxControl_TextChanged(object? sender, EventArgs e)
         {
             if (sender is SyntaxBoxControl)
             {
                 SyntaxBoxControl? syntaxBox = sender as SyntaxBoxControl;
 
                 if (syntaxBox is null)
+                {
                     return;
+                }
 
-
-                tsSave.Enabled = CheckForChanges();
+                tsSave.Enabled = uc.CheckForChanges();
 
                 tsUndo.Enabled = syntaxBox.CanUndo;
                 tsRedo.Enabled = syntaxBox.CanRedo;
-
             }
             else
             {
-                RichTextBox? syntaxBox = sender as RichTextBox;
+                TextBox? syntaxBox = sender as TextBox;
 
                 if (syntaxBox is null)
+                {
                     return;
+                }
 
-
-                tsSave.Enabled = CheckForChanges();
-
-                tsUndo.Enabled = syntaxBox.CanUndo;
-                tsRedo.Enabled = syntaxBox.CanRedo;
-
+                tsSave.Enabled = uc.CheckForChanges();
             }
         }
         private void treeView1_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
@@ -862,7 +753,9 @@ namespace snippet_manager
             treeView.LabelEdit = false;
 
             if (e?.Node is null && e?.Button is not MouseButtons.Right)
+            {
                 return;
+            }
 
             treeView.SelectedNode = e.Node;
 
@@ -880,18 +773,16 @@ namespace snippet_manager
         {
             SaveSnippet(treeView.SelectedNode, false);
         }
-
         private void tsDelete_Click(object sender, EventArgs e)
         {
             DeleteSnippet(treeView.SelectedNode);
         }
-
         private void ShowContext(SyntaxBoxControl? control)
         {
-            // check if control is null
             if (control is null)
-                // return
+            {
                 return;
+            }
 
             control.ContextMenuStrip = contextMenuStrip1;
 
@@ -965,7 +856,9 @@ namespace snippet_manager
         private void ShowContext(TreeNode? node)
         {
             if (node is null)
+            {
                 return;
+            }
 
             node.ContextMenuStrip = null;
             node.ContextMenuStrip = contextMenuStrip2;
@@ -1008,25 +901,21 @@ namespace snippet_manager
                 createNewSnippet.Visible = node?.Level == 2;
             }
         }
-
         private void tsSettings_Click(object sender, EventArgs e)
         {
-            // update tooltips
             if (instance.Config.TryGetValue("Settings", out var settings))
             {
                 toolStrip1.ShowItemToolTips = settings["ShowTooltips"];
             }
         }
-
         private void tsSearch_Click(object sender, EventArgs e)
         {
+            // search treeview
         }
-
         private void tsExit_Click(object sender, EventArgs e)
         {
             Application.Exit();
         }
-
         private void tsHelp_Click(object sender, EventArgs e)
         {
             frmHelp frm = new();
@@ -1034,7 +923,15 @@ namespace snippet_manager
             frm.StartPosition = FormStartPosition.CenterParent;
             frm.ShowDialog();
         }
+        private void toolStripButton1_Click(object sender, EventArgs e)
+        {
+            var snippet = treeView?.SelectedNode?.Tag as _TreeviewItem ?? null;
+            uc.EditMode(snippet);
+            uc.Dock = DockStyle.Fill;
+        }
+        private void comboBox_SelectedValueChanged(object? sender, EventArgs e)
+        {
+            tsSave.Enabled = uc.CheckForChanges();
+        }
     }
-
-   
 }

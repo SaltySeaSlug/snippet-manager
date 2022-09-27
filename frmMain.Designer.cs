@@ -37,6 +37,7 @@
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.tsNew = new System.Windows.Forms.ToolStripButton();
             this.tsSave = new System.Windows.Forms.ToolStripButton();
+            this.tsEdit = new System.Windows.Forms.ToolStripButton();
             this.tsDelete = new System.Windows.Forms.ToolStripButton();
             this.tsPrint = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
@@ -60,13 +61,10 @@
             this.tsHelp = new System.Windows.Forms.ToolStripButton();
             this.tsExit = new System.Windows.Forms.ToolStripButton();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.treeView = new snippet_manager.Controls.BufferedTreeView();
             this.contextMenuStrip2 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.msDeleteSnippet = new System.Windows.Forms.ToolStripMenuItem();
             this.msCreateSnippet = new System.Windows.Forms.ToolStripMenuItem();
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.keywordTextBox = new System.Windows.Forms.RichTextBox();
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.cutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.copyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -77,26 +75,15 @@
             this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
             this.replaceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.findToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.importTextBox = new System.Windows.Forms.RichTextBox();
-            this.lblNewSnippet = new System.Windows.Forms.Label();
-            this.syntaxTextBox = new Alsing.Windows.Forms.SyntaxBoxControl();
             this.printDialog1 = new System.Windows.Forms.PrintDialog();
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.statusStrip1.SuspendLayout();
             this.toolStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
-            this.splitContainer1.Panel2.SuspendLayout();
             this.splitContainer1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).BeginInit();
-            this.splitContainer2.Panel1.SuspendLayout();
-            this.splitContainer2.Panel2.SuspendLayout();
-            this.splitContainer2.SuspendLayout();
             this.contextMenuStrip2.SuspendLayout();
-            this.groupBox2.SuspendLayout();
             this.contextMenuStrip1.SuspendLayout();
-            this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
             // statusStrip1
@@ -107,7 +94,7 @@
             this.toolStripStatusLabel3});
             this.statusStrip1.Location = new System.Drawing.Point(0, 663);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(867, 22);
+            this.statusStrip1.Size = new System.Drawing.Size(787, 22);
             this.statusStrip1.TabIndex = 0;
             this.statusStrip1.Text = "statusStrip1";
             // 
@@ -120,7 +107,7 @@
             // toolStripStatusLabel2
             // 
             this.toolStripStatusLabel2.Name = "toolStripStatusLabel2";
-            this.toolStripStatusLabel2.Size = new System.Drawing.Size(616, 17);
+            this.toolStripStatusLabel2.Size = new System.Drawing.Size(536, 17);
             this.toolStripStatusLabel2.Spring = true;
             // 
             // toolStripStatusLabel3
@@ -131,11 +118,16 @@
             // 
             // toolStrip1
             // 
+            this.toolStrip1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.toolStrip1.AutoSize = false;
+            this.toolStrip1.Dock = System.Windows.Forms.DockStyle.None;
             this.toolStrip1.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
             this.toolStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.tsNew,
             this.tsSave,
+            this.tsEdit,
             this.tsDelete,
             this.tsPrint,
             this.toolStripSeparator1,
@@ -161,7 +153,7 @@
             this.toolStrip1.Location = new System.Drawing.Point(0, 0);
             this.toolStrip1.Name = "toolStrip1";
             this.toolStrip1.Padding = new System.Windows.Forms.Padding(0, 0, 4, 0);
-            this.toolStrip1.Size = new System.Drawing.Size(867, 27);
+            this.toolStrip1.Size = new System.Drawing.Size(788, 27);
             this.toolStrip1.TabIndex = 1;
             this.toolStrip1.Text = "toolStrip1";
             // 
@@ -186,6 +178,15 @@
             this.tsSave.Text = "toolStripButton2";
             this.tsSave.ToolTipText = "Save Snippet";
             this.tsSave.Click += new System.EventHandler(this.tsSave_Click);
+            // 
+            // tsEdit
+            // 
+            this.tsEdit.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.tsEdit.Image = global::snippet_manager.Properties.Resources.edit;
+            this.tsEdit.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.tsEdit.Name = "tsEdit";
+            this.tsEdit.Size = new System.Drawing.Size(24, 24);
+            this.tsEdit.Click += new System.EventHandler(this.toolStripButton1_Click);
             // 
             // tsDelete
             // 
@@ -404,58 +405,39 @@
             this.splitContainer1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.splitContainer1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.splitContainer1.FixedPanel = System.Windows.Forms.FixedPanel.Panel1;
             this.splitContainer1.Location = new System.Drawing.Point(4, 30);
             this.splitContainer1.Name = "splitContainer1";
             // 
             // splitContainer1.Panel1
             // 
-            this.splitContainer1.Panel1.Controls.Add(this.splitContainer2);
+            this.splitContainer1.Panel1.BackColor = System.Drawing.SystemColors.InactiveBorder;
+            this.splitContainer1.Panel1.Controls.Add(this.treeView);
             this.splitContainer1.Panel1MinSize = 200;
             // 
             // splitContainer1.Panel2
             // 
-            this.splitContainer1.Panel2.Controls.Add(this.lblNewSnippet);
-            this.splitContainer1.Panel2.Controls.Add(this.syntaxTextBox);
-            this.splitContainer1.Size = new System.Drawing.Size(859, 630);
+            this.splitContainer1.Panel2.BackColor = System.Drawing.SystemColors.InactiveBorder;
+            this.splitContainer1.Size = new System.Drawing.Size(779, 630);
             this.splitContainer1.SplitterDistance = 200;
             this.splitContainer1.TabIndex = 2;
             // 
-            // splitContainer2
-            // 
-            this.splitContainer2.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer2.FixedPanel = System.Windows.Forms.FixedPanel.Panel2;
-            this.splitContainer2.IsSplitterFixed = true;
-            this.splitContainer2.Location = new System.Drawing.Point(0, 0);
-            this.splitContainer2.Name = "splitContainer2";
-            this.splitContainer2.Orientation = System.Windows.Forms.Orientation.Horizontal;
-            // 
-            // splitContainer2.Panel1
-            // 
-            this.splitContainer2.Panel1.Controls.Add(this.treeView);
-            // 
-            // splitContainer2.Panel2
-            // 
-            this.splitContainer2.Panel2.Controls.Add(this.groupBox2);
-            this.splitContainer2.Panel2.Controls.Add(this.groupBox1);
-            this.splitContainer2.Size = new System.Drawing.Size(200, 630);
-            this.splitContainer2.SplitterDistance = 366;
-            this.splitContainer2.TabIndex = 0;
-            // 
             // treeView
             // 
+            this.treeView.BackColor = System.Drawing.SystemColors.InactiveBorder;
+            this.treeView.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.treeView.ContextMenuStrip = this.contextMenuStrip2;
             this.treeView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.treeView.Location = new System.Drawing.Point(0, 0);
             this.treeView.Name = "treeView";
             this.treeView.PreviousSelectedNode = null;
-            this.treeView.Size = new System.Drawing.Size(200, 366);
-            this.treeView.TabIndex = 0;
+            this.treeView.Size = new System.Drawing.Size(198, 628);
+            this.treeView.TabIndex = 1;
             this.treeView.AfterLabelEdit += new System.Windows.Forms.NodeLabelEditEventHandler(this.treeView1_AfterLabelEdit);
             this.treeView.BeforeSelect += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeView1_BeforeSelect);
             this.treeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeView1_AfterSelect);
             this.treeView.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.treeView1_NodeMouseClick);
-            this.treeView.KeyDown += new System.Windows.Forms.KeyEventHandler(this.frmMain_KeyDown);
             // 
             // contextMenuStrip2
             // 
@@ -476,27 +458,6 @@
             this.msCreateSnippet.Name = "msCreateSnippet";
             this.msCreateSnippet.Size = new System.Drawing.Size(178, 22);
             this.msCreateSnippet.Text = "Create New Snippet";
-            // 
-            // groupBox2
-            // 
-            this.groupBox2.Controls.Add(this.keywordTextBox);
-            this.groupBox2.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.groupBox2.Location = new System.Drawing.Point(0, 0);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(200, 130);
-            this.groupBox2.TabIndex = 1;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Keywords";
-            // 
-            // keywordTextBox
-            // 
-            this.keywordTextBox.ContextMenuStrip = this.contextMenuStrip1;
-            this.keywordTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.keywordTextBox.Location = new System.Drawing.Point(3, 19);
-            this.keywordTextBox.Name = "keywordTextBox";
-            this.keywordTextBox.Size = new System.Drawing.Size(194, 108);
-            this.keywordTextBox.TabIndex = 2;
-            this.keywordTextBox.Text = "";
             // 
             // contextMenuStrip1
             // 
@@ -565,74 +526,6 @@
             this.findToolStripMenuItem.Size = new System.Drawing.Size(115, 22);
             this.findToolStripMenuItem.Text = "Find";
             // 
-            // groupBox1
-            // 
-            this.groupBox1.Controls.Add(this.importTextBox);
-            this.groupBox1.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.groupBox1.Location = new System.Drawing.Point(0, 130);
-            this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(200, 130);
-            this.groupBox1.TabIndex = 0;
-            this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Imports";
-            // 
-            // importTextBox
-            // 
-            this.importTextBox.ContextMenuStrip = this.contextMenuStrip1;
-            this.importTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.importTextBox.Location = new System.Drawing.Point(3, 19);
-            this.importTextBox.Name = "importTextBox";
-            this.importTextBox.Size = new System.Drawing.Size(194, 108);
-            this.importTextBox.TabIndex = 1;
-            this.importTextBox.Text = "";
-            this.importTextBox.TextChanged += new System.EventHandler(this.syntaxBoxControl_TextChanged);
-            // 
-            // lblNewSnippet
-            // 
-            this.lblNewSnippet.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.lblNewSnippet.AutoSize = true;
-            this.lblNewSnippet.BackColor = System.Drawing.Color.White;
-            this.lblNewSnippet.ForeColor = System.Drawing.Color.Red;
-            this.lblNewSnippet.Location = new System.Drawing.Point(561, 3);
-            this.lblNewSnippet.Name = "lblNewSnippet";
-            this.lblNewSnippet.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.lblNewSnippet.Size = new System.Drawing.Size(74, 15);
-            this.lblNewSnippet.TabIndex = 1;
-            this.lblNewSnippet.Text = "New Snippet";
-            this.lblNewSnippet.Visible = false;
-            // 
-            // syntaxTextBox
-            // 
-            this.syntaxTextBox.ActiveView = Alsing.Windows.Forms.ActiveView.BottomRight;
-            this.syntaxTextBox.AutoListPosition = null;
-            this.syntaxTextBox.AutoListSelectedText = "a123";
-            this.syntaxTextBox.AutoListVisible = false;
-            this.syntaxTextBox.BackColor = System.Drawing.Color.White;
-            this.syntaxTextBox.BorderStyle = Alsing.Windows.Forms.BorderStyle.None;
-            this.syntaxTextBox.ContextMenuStrip = this.contextMenuStrip1;
-            this.syntaxTextBox.CopyAsRTF = false;
-            this.syntaxTextBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.syntaxTextBox.FontName = "Courier new";
-            this.syntaxTextBox.GutterMarginWidth = 0;
-            this.syntaxTextBox.ImeMode = System.Windows.Forms.ImeMode.NoControl;
-            this.syntaxTextBox.InfoTipCount = 1;
-            this.syntaxTextBox.InfoTipPosition = null;
-            this.syntaxTextBox.InfoTipSelectedIndex = 1;
-            this.syntaxTextBox.InfoTipVisible = false;
-            this.syntaxTextBox.Location = new System.Drawing.Point(0, 0);
-            this.syntaxTextBox.LockCursorUpdate = false;
-            this.syntaxTextBox.Name = "syntaxTextBox";
-            this.syntaxTextBox.ParseOnPaste = true;
-            this.syntaxTextBox.ShowScopeIndicator = false;
-            this.syntaxTextBox.Size = new System.Drawing.Size(655, 630);
-            this.syntaxTextBox.SmoothScroll = false;
-            this.syntaxTextBox.SplitviewH = -4;
-            this.syntaxTextBox.SplitviewV = -4;
-            this.syntaxTextBox.TabGuideColor = System.Drawing.Color.FromArgb(((int)(((byte)(233)))), ((int)(((byte)(233)))), ((int)(((byte)(233)))));
-            this.syntaxTextBox.TabIndex = 0;
-            this.syntaxTextBox.WhitespaceColor = System.Drawing.SystemColors.ControlDark;
-            this.syntaxTextBox.TextChanged += new System.EventHandler(this.syntaxBoxControl_TextChanged);
-            // 
             // printDialog1
             // 
             this.printDialog1.UseEXDialog = true;
@@ -647,11 +540,15 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(867, 685);
+            this.ClientSize = new System.Drawing.Size(787, 685);
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.toolStrip1);
             this.Controls.Add(this.statusStrip1);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.KeyPreview = true;
+            this.MaximizeBox = false;
+            this.MaximumSize = new System.Drawing.Size(803, 724);
+            this.MinimumSize = new System.Drawing.Size(803, 724);
             this.Name = "frmMain";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Snippet Manager";
@@ -661,18 +558,10 @@
             this.toolStrip1.ResumeLayout(false);
             this.toolStrip1.PerformLayout();
             this.splitContainer1.Panel1.ResumeLayout(false);
-            this.splitContainer1.Panel2.ResumeLayout(false);
-            this.splitContainer1.Panel2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
             this.splitContainer1.ResumeLayout(false);
-            this.splitContainer2.Panel1.ResumeLayout(false);
-            this.splitContainer2.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).EndInit();
-            this.splitContainer2.ResumeLayout(false);
             this.contextMenuStrip2.ResumeLayout(false);
-            this.groupBox2.ResumeLayout(false);
             this.contextMenuStrip1.ResumeLayout(false);
-            this.groupBox1.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -707,14 +596,9 @@
         private ToolStripButton tsHelp;
         private ToolStripButton tsExit;
         private SplitContainer splitContainer1;
-        private SplitContainer splitContainer2;
-        private snippet_manager.Controls.BufferedTreeView treeView;
-        private GroupBox groupBox2;
-        private GroupBox groupBox1;
         private ToolStripStatusLabel toolStripStatusLabel1;
         private ToolStripStatusLabel toolStripStatusLabel2;
         private ToolStripStatusLabel toolStripStatusLabel3;
-        private Alsing.Windows.Forms.SyntaxBoxControl syntaxTextBox;
         private PrintDialog printDialog1;
         private ImageList imageList1;
         private ContextMenuStrip contextMenuStrip1;
@@ -729,9 +613,8 @@
         private ToolStripMenuItem findToolStripMenuItem;
         private ToolStripMenuItem msDeleteSnippet;
         private ToolStripMenuItem msCreateSnippet;
-        private RichTextBox importTextBox;
-        private RichTextBox keywordTextBox;
         private ContextMenuStrip contextMenuStrip2;
-        private Label lblNewSnippet;
+        private Controls.BufferedTreeView treeView;
+        private ToolStripButton tsEdit;
     }
 }

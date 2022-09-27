@@ -1,4 +1,7 @@
 ﻿using snippet_manager.Entities;
+using SQLite;
+using SQLiteNetExtensions.Attributes;
+using System.ComponentModel.DataAnnotations;
 
 namespace snippet_manager.Models
 {
@@ -16,4 +19,7 @@ namespace snippet_manager.Models
             set { Import = string.Join(Environment.NewLine, value ?? new()) ?? string.Empty; }
         }
     }
+
+
+   
 }

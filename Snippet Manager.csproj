@@ -7,11 +7,19 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyVersion>1.0.0.1503</AssemblyVersion>
-    <FileVersion>1.0.0.1503</FileVersion>
+    <AssemblyVersion>1.0.0.1157</AssemblyVersion>
+    <FileVersion>1.0.0.1157</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Entities\Key.cs" />
+    <Compile Remove="Entities\Snippet.cs" />
+    <Compile Remove="Entities\SnippetCategory.cs" />
+    <Compile Remove="Entities\SnippetGroup.cs" />
+    <Compile Remove="Entities\SnippetLanguage.cs" />
+    <Compile Remove="Entities\SnippetQuery.cs" />
+    <Compile Remove="Models\ItemKey.cs" />
+    <Compile Remove="Models\ItemValue.cs" />
     <Compile Remove="Services\SQLite.cs" />
     <Compile Remove="Services\SQLiteAsync.cs" />
   </ItemGroup>
@@ -92,13 +100,13 @@
     <None Update="SyntaxFiles\MSIL.syn">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="SyntaxFiles\MySQL_SQL.syn">
+    <None Update="SyntaxFiles\MySQL.syn">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="SyntaxFiles\npath.syn">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="SyntaxFiles\Oracle_SQL.syn">
+    <None Update="SyntaxFiles\OracleSQL.syn">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="SyntaxFiles\Perl.syn">
@@ -116,16 +124,16 @@
     <None Update="SyntaxFiles\RegEx.syn">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="SyntaxFiles\rtf.syn">
+    <None Update="SyntaxFiles\RTF.syn">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="SyntaxFiles\SmallTalk.syn">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="SyntaxFiles\SQLServer2K_SQL.syn">
+    <None Update="SyntaxFiles\SQLServer2K.syn">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="SyntaxFiles\SQLServer7_SQL.syn">
+    <None Update="SyntaxFiles\SQLServer7.syn">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="SyntaxFiles\SystemPolicies.syn">
@@ -159,6 +167,10 @@
 
   <ItemGroup>
     <None Include=".github\workflows\build.yml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="SQLite Extensions\" />
   </ItemGroup>
 
 </Project>
