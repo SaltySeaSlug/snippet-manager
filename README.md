@@ -1,7 +1,7 @@
 # Snippet Manager
 
-![Downloads](https://img.shields.io/github/downloads/saltyseaslug/snippet-manager/total?style=flat-square)
-![ReleaseVersion](https://img.shields.io/github/v/release/saltyseaslug/snippet-manager?style=flat-square)
+<!--![Downloads](https://img.shields.io/github/downloads/saltyseaslug/snippet-manager/total?style=flat-square)-->
+<!--![ReleaseVersion](https://img.shields.io/github/v/release/saltyseaslug/snippet-manager?style=flat-square)-->
 ![License](https://img.shields.io/github/license/saltyseaslug/snippet-manager?style=flat-square)
 
 This program stores and organizes your code snippets for most programming language with its easy to use features. I drew inspiration from the original [Snippet Manager] by Richard Gardner which was lacking a few features, so I decided to make my own version. Snippet Manager is very useful for people who are starting out in programming and for advanced programmers who need a place to store their code snippets for future reuse.
