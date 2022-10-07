@@ -16,10 +16,10 @@ This program stores and organizes your code snippets for most programming langua
 - SQLite database for storage instead of file storage.
 - Syntax highlighting for code snippets.
 - Print snippets.
-- Manage authors, contact info, and languages for snippet records.
 
 ## Planned Features
 
+- [ ] Manage authors, contact info, and languages for snippet records.
 - [ ] Importing and exporting of snippet records.
 - [ ] Search engine that can search by keywords, languages, authors, or all three.
 - [ ] Keyboard shortcuts.
